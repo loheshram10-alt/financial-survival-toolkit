@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Survival Toolkit</title>
+    <!-- Google Fonts: Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-decorations">
+        <div class="blob blob-blue"></div>
+        <div class="blob blob-mint"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <span class="header-kicker">PERSONAL FINANCE</span>
+            <h1 class="header-title">Financial Survival Toolkit</h1>
+            <p class="header-subtitle">Track spending, manage budgets, and stay on top of your savings goals.</p>
+            <div id="backendIndicator" class="backend-status-pill">
+                <span class="status-dot"></span>
+                <span id="backendStatusLabel">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Notification Toast Container -->
+        <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+        <!-- 1. Top Dashboard Grid -->
+        <section class="top-grid">
+            <!-- Total Spent Card (Gradient blue to green, white text) -->
+            <div class="card card-total-spent" id="totalSpentCard">
+                <div class="card-header-clean">
+                    <span class="card-badge">Current Month Overview</span>
+                    <span class="card-icon">⚡</span>
+                </div>
+                <div class="total-spent-content">
+                    <p class="label-white-muted">TOTAL SPENT (Committed)</p>
+                    <div class="total-spent-amount" id="totalSpentAmount">₹0.00</div>
+                    <div class="budget-status-row">
+                        <span id="budgetStatusText" class="budget-status-pill">No monthly budget set yet.</span>
+                        <span id="budgetTargetDisplay" class="budget-target-pill">Budget: ₹0.00</span>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="budgetProgressBar" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-bar-labels">
+                            <span id="progressPercentLabel">0.0% used</span>
+                            <span id="progressLimitLabel">100%</span>
+                        </div>
+                    </div>
+
+                    <!-- Burn Rate Text -->
+                    <div class="burn-rate-box" id="burnRateBox">
+                        <span class="burn-rate-icon">🔥</span>
+                        <span id="burnRateText">Set budget to see burn rate</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Card -->
+            <div class="card card-profile">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Active Profile</h2>
+                    <span class="section-tag">Profile Control</span>
+                </div>
+                
+                <div class="profile-actions-area">
+                    <div class="form-group">
+                        <label for="profileSelect" class="form-label">Select Profile</label>
+                        <select id="profileSelect" class="form-select">
+                            <option value="">-- No Profile Selected --</option>
+                        </select>
+                    </div>
+
+                    <div class="profile-btn-group">
+                        <button type="button" class="btn btn-outline-primary" id="btnOpenCreateProfile">
+                            <span class="btn-icon">＋</span> New Profile
+                        </button>
+                        <button type="button" class="btn btn-ghost" id="btnRefreshMonth">
+                            <span class="btn-icon">🔄</span> Refresh Month
+                        </button>
+                        <button type="button" class="btn btn-danger-outline" id="btnRemoveProfile">
+                            <span class="btn-icon">🗑️</span> Remove Profile
+                        </button>
+                    </div>
+
+                    <!-- Inline Create Profile Drawer/Form -->
+                    <div id="createProfileFormContainer" class="nested-form-box hidden">
+                        <h3 class="nested-form-title">Create New Profile</h3>
+                        <form id="createProfileForm" onsubmit="return false;">
+                            <div class="form-group">
+                                <label for="newProfileName" class="form-label">Profile Name</label>
+                                <input type="text" id="newProfileName" class="form-input" placeholder="e.g. Personal, Lohesh, Freelance" maxlength="100" required>
+                                <div class="form-error" id="newProfileError"></div>
+                            </div>
+                            <div class="form-row-actions">
+                                <button type="submit" class="btn btn-primary" id="btnSaveProfile">Create</button>
+                                <button type="button" class="btn btn-ghost" id="btnCancelProfile">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Workspace Grid (6 cards) -->
+        <section class="workspace-grid">
+
+            <!-- Card 2.1: Add / Edit Expense -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading" id="expenseFormHeading">Add Expense</h2>
+                    <span class="section-tag">Log Transaction</span>
+                </div>
+                <form id="expenseForm" onsubmit="return false;" novalidate>
+                    <input type="hidden" id="editExpenseId" value="">
+                    
+                    <div class="form-row-two">
+                        <div class="form-group">
+                            <label for="expenseAmount" class="form-label">Amount (₹) *</label>
+                            <input type="number" step="0.01" min="0.01" id="expenseAmount" class="form-input" placeholder="0.00" required>
+                            <div class="form-error" id="expenseAmountError"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="expenseDate" class="form-label">Date *</label>
+                            <input type="date" id="expenseDate" class="form-input" required>
+                            <div class="form-error" id="expenseDateError"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-row-two">
+                        <div class="form-group">
+                            <label for="expenseCategorySelect" class="form-label">Category *</label>
+                            <select id="expenseCategorySelect" class="form-select" required>
+                                <option value="Food">Food</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Other">Other (Custom)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="expensePaymentMethod" class="form-label">Payment Method</label>
+                            <select id="expensePaymentMethod" class="form-select">
+                                <option value="UPI" selected>UPI</option>
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Category field shown only when Category == 'Other' -->
+                    <div class="form-group hidden" id="customCategoryGroup">
+                        <label for="expenseCustomCategory" class="form-label">Custom Category *</label>
+                        <input type="text" id="expenseCustomCategory" class="form-input" placeholder="e.g. Health, Entertainment, Books">
+                        <div class="form-error" id="customCategoryError"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseNote" class="form-label">Note (Optional)</label>
+                        <input type="text" id="expenseNote" class="form-input" placeholder="e.g. Dinner with friends, Metro card recharge">
+                    </div>
+
+                    <div class="form-row-actions">
+                        <button type="submit" class="btn btn-primary" id="btnSubmitExpense">
+                            <span class="btn-icon">＋</span> Add Expense
+                        </button>
+                        <button type="button" class="btn btn-ghost hidden" id="btnCancelExpenseEdit">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Card 2.2: Smart Recurring Expenses -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Smart Recurring Expenses</h2>
+                    <span class="section-tag">Subscriptions & Bills</span>
+                </div>
+                <form id="recurringForm" onsubmit="return false;" novalidate>
+                    <div class="form-row-two">
+                        <div class="form-group">
+                            <label for="recurringName" class="form-label">Rule Name *</label>
+                            <input type="text" id="recurringName" class="form-input" placeholder="e.g. Netflix, Wifi, Rent" required>
+                            <div class="form-error" id="recurringNameError"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="recurringAmount" class="form-label">Amount (₹) *</label>
+                            <input type="number" step="0.01" min="0.01" id="recurringAmount" class="form-input" placeholder="0.00" required>
+                            <div class="form-error" id="recurringAmountError"></div>
+                        </div>
+                    </div>
+                    <div class="form-row-two">
+                        <div class="form-group">
+                            <label for="recurringPaymentMethod" class="form-label">Payment Method</label>
+                            <select id="recurringPaymentMethod" class="form-select">
+                                <option value="UPI" selected>UPI</option>
+                                <option value="Card">Card</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="recurringDueDay" class="form-label">Due Day of Month (1-31) *</label>
+                            <input type="number" min="1" max="31" id="recurringDueDay" class="form-input" placeholder="1-31" required>
+                            <div class="form-error" id="recurringDueDayError"></div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btnAddRecurringRule">
+                        <span class="btn-icon">＋</span> Add Recurring Rule
+                    </button>
+                </form>
+
+                <!-- Recurring Output Box -->
+                <div class="recurring-output-box">
+                    <span class="output-label">Recurring Output:</span>
+                    <strong id="recurringMonthlyTotalDisplay" class="output-highlight">Monthly recurring total: ₹0.00</strong>
+                </div>
+
+                <!-- Rules list -->
+                <div class="mini-list-container">
+                    <h4 class="mini-list-title">Configured Rules</h4>
+                    <div id="recurringRulesList" class="mini-items-list">
+                        <div class="empty-state">No recurring rules yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2.3: Set Monthly Budget -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Set Monthly Budget</h2>
+                    <span class="section-tag">Cap Spend</span>
+                </div>
+                <p class="card-helper-text">Establish a target monthly allowance to track your live burn rate.</p>
+                <form id="budgetForm" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="monthlyBudgetInput" class="form-label">Monthly Budget (₹)</label>
+                        <input type="number" step="0.01" min="0" id="monthlyBudgetInput" class="form-input" placeholder="Enter ₹0 or leave empty to clear">
+                        <small class="form-hint">Enter 0 or leave empty to disable budget limit.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btnSaveBudget">
+                        <span class="btn-icon">💾</span> Save Budget
+                    </button>
+                </form>
+            </div>
+
+            <!-- Card 2.4: Savings Goal -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Savings Goal</h2>
+                    <span class="section-tag">Target Tracker</span>
+                </div>
+                <form id="goalForm" onsubmit="return false;">
+                    <div class="form-row-two">
+                        <div class="form-group">
+                            <label for="goalAmount" class="form-label">Goal Amount (₹) *</label>
+                            <input type="number" step="0.01" min="0.01" id="goalAmount" class="form-input" placeholder="e.g. 50000" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="goalDays" class="form-label">Days to Save *</label>
+                            <input type="number" min="1" id="goalDays" class="form-input" placeholder="e.g. 90" required>
+                        </div>
+                    </div>
+                    <div class="form-error" id="goalFormError"></div>
+                    <button type="submit" class="btn btn-primary" id="btnSaveGoal">
+                        <span class="btn-icon">🎯</span> Set Goal
+                    </button>
+                </form>
+
+                <div class="goal-target-callout" id="goalTargetCallout">
+                    <span class="callout-icon">💡</span>
+                    <span id="goalDailyTargetText">Set a goal to calculate daily savings.</span>
+                </div>
+
+                <hr class="card-divider">
+
+                <!-- Add Amount Saved -->
+                <div class="savings-add-section">
+                    <h3 class="subsection-title">Add Amount Saved</h3>
+                    <form id="addSavingsForm" onsubmit="return false;">
+                        <div class="form-row-two">
+                            <div class="form-group">
+                                <label for="savingsAmount" class="form-label">Amount (₹) *</label>
+                                <input type="number" step="0.01" min="0.01" id="savingsAmount" class="form-input" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="savingsDate" class="form-label">Date *</label>
+                                <input type="date" id="savingsDate" class="form-input" required>
+                            </div>
+                        </div>
+                        <div class="form-error" id="savingsFormError"></div>
+                        <button type="submit" class="btn btn-primary" id="btnAddSavings">
+                            <span class="btn-icon">＋</span> Add Saved Amount
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Savings Entries Grouped by Date -->
+                <div class="mini-list-container">
+                    <h4 class="mini-list-title">Saved Entries (Grouped by Date)</h4>
+                    <div id="savingsGroupedList" class="mini-items-list">
+                        <div class="empty-state">No saved amounts logged yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2.5: No-Spend Challenge -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">No-Spend Challenge</h2>
+                    <span class="section-tag">Discipline</span>
+                </div>
+                <div class="challenge-status-box" id="challengeStatusBox">
+                    <div class="challenge-status-label" id="challengeStatusText">No active challenge.</div>
+                    <div class="challenge-streak-highlight" id="challengeStreakText">Current no-spend streak: 0 day(s).</div>
+                    <div class="challenge-progress-sub" id="challengeProgressText">0/0 no-spend days (0.0%)</div>
+                </div>
+
+                <form id="challengeForm" onsubmit="return false;">
+                    <div class="form-group">
+                        <label for="challengeDaysInput" class="form-label">Challenge Duration (Days)</label>
+                        <input type="number" min="1" max="365" id="challengeDaysInput" class="form-input" placeholder="e.g. 7, 14, 30" value="7">
+                        <div class="form-error" id="challengeError"></div>
+                    </div>
+                    <div class="form-row-actions">
+                        <button type="button" class="btn btn-primary" id="btnStartChallenge">
+                            <span class="btn-icon">🚀</span> Start Challenge
+                        </button>
+                        <button type="button" class="btn btn-ghost" id="btnStopChallenge">
+                            <span class="btn-icon">⏹</span> Stop Challenge
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Card 2.6: Savings Progress -->
+            <div class="card card-savings-progress">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Savings Progress</h2>
+                    <span class="section-tag">Milestones</span>
+                </div>
+                
+                <div id="savingsProgressBanner" class="status-banner banner-info">
+                    Set a goal to see your daily target.
+                </div>
+
+                <div class="metrics-two-col">
+                    <div class="metric-pill">
+                        <span class="metric-label">Daily Target</span>
+                        <strong class="metric-value" id="progressDailyTarget">₹0.00</strong>
+                    </div>
+                    <div class="metric-pill">
+                        <span class="metric-label">Total Saved</span>
+                        <strong class="metric-value text-success" id="progressTotalSaved">₹0.00</strong>
+                    </div>
+                </div>
+
+                <div class="metric-pill">
+                    <span class="metric-label">Remaining to Goal</span>
+                    <strong class="metric-value" id="progressRemaining">₹0.00</strong>
+                </div>
+
+                <div class="monthly-summary-box">
+                    <span class="summary-icon">📅</span>
+                    <div id="savingsMonthlySummaryText" class="summary-text">
+                        Log savings to view monthly milestones.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 3. Bottom Grid (4 cards) -->
+        <section class="bottom-grid">
+
+            <!-- Card 3.1: Category Breakdown -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Category Breakdown</h2>
+                    <span class="section-tag">Analytics</span>
+                </div>
+                <div class="chart-wrapper">
+                    <div id="chartEmptyState" class="empty-state hidden">No expenses in this period.</div>
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Card 3.2: Insights & Alerts -->
+            <div class="card">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Insights & Alerts</h2>
+                    <span class="section-tag">AI Advisor</span>
+                </div>
+                <div id="insightsContainer" class="insights-list">
+                    <div class="empty-state">Create a profile to generate insights</div>
+                </div>
+            </div>
+
+            <!-- Card 3.3: Recent Expenses (with filters) -->
+            <div class="card card-span-full">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Recent Expenses</h2>
+                    <span class="section-tag">Transaction History</span>
+                </div>
+
+                <!-- Filters toolbar -->
+                <div class="filters-toolbar">
+                    <div class="filter-group filter-search">
+                        <label for="filterSearch" class="filter-label">Search</label>
+                        <input type="text" id="filterSearch" class="form-input" placeholder="Search note, category, payment...">
+                    </div>
+                    <div class="filter-group filter-category">
+                        <label for="filterCategory" class="filter-label">Category</label>
+                        <select id="filterCategory" class="form-select">
+                            <option value="">All categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group filter-date">
+                        <label for="filterStartDate" class="filter-label">Start Date</label>
+                        <input type="date" id="filterStartDate" class="form-input">
+                    </div>
+                    <div class="filter-group filter-date">
+                        <label for="filterEndDate" class="filter-label">End Date</label>
+                        <input type="date" id="filterEndDate" class="form-input">
+                    </div>
+                    <div class="filter-actions">
+                        <button type="button" class="btn btn-ghost" id="btnClearFilters">
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Expenses Table / List -->
+                <div class="table-container">
+                    <div id="expensesList" class="expenses-stream">
+                        <div class="empty-state">Create a profile to start tracking</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3.4: Bill Calendar (Next 30 Days) -->
+            <div class="card card-span-full">
+                <div class="card-title-group">
+                    <h2 class="card-heading">Bill Calendar (Next 30 Days)</h2>
+                    <span class="section-tag">Upcoming Obligations</span>
+                </div>
+                <div id="billCalendarList" class="bills-stream">
+                    <div class="empty-state">No upcoming recurring bills in the next 30 days.</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Financial Survival Toolkit &bull; Built with Spring Boot 3 &amp; Vanilla JS &bull; Local H2 Storage</p>
+        </footer>
+    </div>
+
+    <!-- Edit Savings Modal -->
+    <div id="editSavingsModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <h3 class="modal-title">Edit Savings for Date</h3>
+            <p class="modal-subtitle" id="editSavingsDateLabel"></p>
+            <form id="editSavingsForm" onsubmit="return false;">
+                <input type="hidden" id="editSavingsDate">
+                <div class="form-group">
+                    <label for="editSavingsAmount" class="form-label">Total Amount for this Date (₹)</label>
+                    <input type="number" step="0.01" min="0.01" id="editSavingsAmount" class="form-input" required>
+                    <div class="form-error" id="editSavingsError"></div>
+                </div>
+                <div class="form-row-actions">
+                    <button type="submit" class="btn btn-primary" id="btnSaveEditedSavings">Save</button>
+                    <button type="button" class="btn btn-ghost" id="btnCancelEditSavings">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal-backdrop hidden">
+        <div class="modal-card">
+            <h3 class="modal-title" id="confirmModalTitle">Are you sure?</h3>
+            <p class="modal-subtitle" id="confirmModalMessage">This action cannot be undone.</p>
+            <div class="form-row-actions">
+                <button type="button" class="btn btn-danger" id="confirmModalConfirmBtn">Confirm</button>
+                <button type="button" class="btn btn-ghost" id="confirmModalCancelBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>
